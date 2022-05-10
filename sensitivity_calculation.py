@@ -21,8 +21,18 @@ __author__ = 'Attilio Panniello'
 
 import numpy as np
 import pandas as pd
+from time import sleep,time
+from datetime import datetime
+
+# ------------------------------------------------------------------------------
+# meas configuration settings
+# -----------------------------------------------------------------------------
+
+perFile = 'Savituck_RCV-2Mbps-01'
+calFile = 'Savituck_TRM_MAX-2Mbps-01'
 
 results_df = pd.read_csv('./results_df.csv', sep=',', na_values=" , ")
+
 per_df = pd.read_csv('./RCV2M.csv', sep=',', na_values=" , ")
 calibration_df = pd.read_csv('./TRM2M.csv', sep=',', na_values=" , ")
 
@@ -47,26 +57,30 @@ def yes_no(question):
            print ("Please respond with 'yes' or 'no'")
 
 # User interaction section
+trmCalibrationPwr = int(input("Please enter the power used for the calibration of the TRM in dBm [default = 8]:") or 8 )
 dataPayload = int(input("Please enter payload length in bytes [default = 10]:") or 10 )
 isGaming = yes_no("Gaming [y or Return] or Unifying [n] DUT?")
 
 if isGaming == True:
     preambleAndAdress = 6
-    CRC = 3
+    cRc = 3
         
 else:
     preambleAndAdress = 5
-    CRC = 2
+    cRc = 2
 
-toto = 1.125
-totalBytesPerPacket = preambleAndAdress + toto + dataPayload + CRC  
+controlInfo = 1.125
+totalBytesPerPacket = preambleAndAdress + controlInfo + dataPayload + cRc  
 totalBitsPerPacket = 8*totalBytesPerPacket
 
-targetPER = 
+targetBER = 0.1
+targetPER = 1-(1-targetBER)^((preambleAndAdress + controlInfo + dataPayload + cRc)*8)
 targetPERrd = round(targetPER,2) 
 
-
+#########################################################
 # End of User interaction section
+startTime=datetime.now()
+
 
 print(results_df.head())
 
@@ -81,4 +95,10 @@ mean_df = results_df[(results_df.device =='Garnet Molduck TopazTKL Molduck LS2')
 meanRB = mean_df["RB score"].mean()
 
 print(f'RB Score mean value : {meanRB}')
+
+#########################################################
+endTime=datetime.now()
+execTime=(endTime-startTime )
+print(f'Script execution time: {execTime}')
+#print(f'Measurement file name extension: {fileSaveTag}')
 
