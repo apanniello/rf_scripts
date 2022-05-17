@@ -42,88 +42,65 @@ def p2f(x):
     return float(x.strip('%'))/100
 
 attenuationValues =[0,20,40,60,80,85,87,89,90,91,92,93,95,98,100]
-# print(df.loc[df['Name'] == 'Bert'])
-# Attenuation_Enum
-# attenuationValues =[0,89,100]
-
-
-# attenuationSteps = 15 # number of different attenuations used
 attenuationSteps = len(attenuationValues) # number of different attenuations used
-print(f'Number of attenuation steps: {attenuationSteps}')
+# print(f'Number of attenuation steps: {attenuationSteps}')
 PER_lines = calibration_chanels*attenuationSteps
 PER_fields = ['PerRx(%)', 'Channel','Attenuation']
 PER_df = pd.read_csv(per_meas, skiprows=1,nrows=PER_lines, usecols=PER_fields, converters={'PerRx(%)':p2f}, sep=',', na_values=" , ")
-print(f'PER_df end : {PER_df.tail()}')
-
-sorted_PER_df = PER_df[PER_df['PerRx(%)'] >= targetPERrd]
-sorted_PER_df_min = PER_df[PER_df['PerRx(%)'] >= targetPERrd]['PerRx(%)'].min()
-sorted_PER_df_max = PER_df[PER_df['PerRx(%)'] >= targetPERrd]['PerRx(%)'].max()
-# Code syntax example example
-# mValue[x] = round(results_df[(results_df.noise == noise)& (results_df.samples > 2000)]['RB score [%]'].mean())
-print(f'sorted_PER_df end : {sorted_PER_df.tail()}')
-print(f'--------------------------------------------')
 print(f'PER_df start : {PER_df.head()}')
+print(f'--------------------------------------------')
+sorted_PER_df = PER_df[PER_df['PerRx(%)'] >= targetPERrd]
 print(f'sorted_PER_df start : {sorted_PER_df.head()}')
 print(f'--------------------------------------------')
-print(f'sorted_PER_df_min : {sorted_PER_df_min}')
-print(f'sorted_PER_df_max : {sorted_PER_df_max}')
+
+# EXAMPLES:
+# 1) Suppose this dataframe:
+
+# >>> print(df.head())
+#     N   M  S
+# 0  10  42  4
+# 1  39  22  2
+# 2  11  52  4
+# 3  97  42  2
+# 4  66  72  1
+
+# How do I get the row where a column has the minimum value? For example, how do I get the row where column 'S' has value 1?
+
+# ANSWER
+# df[df['S']==df['S'].min()]
+
+
+# 2) https://stackoverflow.com/questions/58583661/how-do-i-select-all-rows-with-a-minimum-value-that-meet-a-condition-in-another-c
+
+#ANSWER
+# df[(df['Points']==0) & (df['Day']==df[df['Points']==0]['Day'].min())]
+
+rows = []
+sensitivity_PER_df = pd.DataFrame()
+for i in range(minChanel, maxChanel+1, 1):
+    channel_df = sorted_PER_df[sorted_PER_df['Channel']==i]
+    channel_min = sorted_PER_df[sorted_PER_df['Channel']==i]['PerRx(%)'].min()
+    channel_df_min = channel_df[channel_df['PerRx(%)'] == channel_min]
+    sensitivity_PER_df=sensitivity_PER_df.append(channel_df_min, ignore_index=True)
+
+# sensitivity_PER_df = sensitivity_PER_df.reset_index()
+
+print(f'channel_df : {channel_df}')
 print(f'--------------------------------------------')
+print(f'channel_min : {channel_min}')
+print(f'--------------------------------------------')
+print(f'channel_df_@min : {channel_df_min}')
+print(f'--------------------------------------------')
+print(f'--------------------------------------------')
+print(f'sensitivity_PER_df : {sensitivity_PER_df}')
 
-# for i in range(minChanel, maxChanel+1, 1):
-#     Received_power = calibration_df['H1 (dBm)'][calibration_df.Channel == i]
-#     print(f'Received_power on chanel {i} :{Received_power}')
-    
-#     for k in attenuationValues:
-#         print(f'Attenuation value:{k}')
-#         # PER_df['Rx InputPower [dBm]'] = Received_power - PER_df['Attenuation'][(PER_df.Channel == i) & (PER_df.Attenuation == k)]
-#         print(f'Received_power : {Received_power}')
-#         # print(PER_df['Attenuation'][(PER_df.Channel == i)])
-        
-#         tmp = PER_df['Attenuation'][(PER_df.Channel == i) & (PER_df['PerRx(%)'] >= targetPERrd)]
-#         print(f'Programmed attenuation @ PER >= {targetPERrd} % : {tmp.head()}')
-#         # print(calibration_df['H1 (dBm)'][calibration_df.Channel == i] - PER_df['Attenuation'][(PER_df.Channel == i) & (PER_df.Attenuation == k)])
-#         # PER_df['Rx InputPower [dBm]'] = calibration_df['H1 (dBm)'][calibration_df.Channel == i]
-#         print(f'---------------')
 
-# Rx InputPower [dBm]
-print(f'calibration_df beginning : {calibration_df.head()}')
-print(f'calibration_df end : {calibration_df.tail()}')
-# print(calibration_df.head())
-# print(calibration_df.tail())
-
-print(f'PER_df beginning : {PER_df.head()}')
-print(f'PER_df end : {PER_df.tail()}')
-
-print(f'sorted_PER_df beginning : {sorted_PER_df.head()}')
-print(f'sorted_PER_df end : {sorted_PER_df.tail()}')
-# print(PER_df.head())
-# print(PER_df.tail())
-
-# print(calibration_df.Channel.dtype)
-# print(calibration_df['H1 (dBm)'].dtype)
-# print(list(calibration_df.columns))
-# # calibration_df['Channel'] = calibration_df['Channel'].astype('int')
-# print(calibration_df['H1 (dBm)'][calibration_df.Channel == 6])
-# a = calibration_df['H1 (dBm)'][calibration_df.Channel == 6]
-
-# print(f'{a} +2 = {a+2}')
-
-# col_mean_df_header_list = ['device','No Noise', 'Very Noisy', 'LAN', 'Home 20Mhz', 'Tournament']
-
-# mean_df = pd.DataFrame(columns=col_mean_df_header_list)
-# # ignore_index=True
-
-# print(results_df.head())
-
-# # del results_df
-
-# print(results_df[results_df.samples > 10000])
-
-# print(results_df[(results_df.device =='Garnet Molduck TopazTKL Molduck LS2') & (results_df.noise == 'No Noise Nominal') & (results_df.test == 'M11_R08_K05_R08_SYM')])
-
-# mean_df = results_df[(results_df.device =='Garnet Molduck TopazTKL Molduck LS2') & (results_df.noise == 'No Noise Nominal') & (results_df.test == 'M11_R08_K05_R08_SYM')]
-
-# meanRB = mean_df["RB score"].mean()
-
-# print(f'RB Score mean value : {meanRB}')
+##########################################################################
+#
+# Save sensitivity attenuation values into ooutput file
+csv_path = './output.csv'
+if sensitivity_PER_df is not None:
+    # pd.concat([df3, df4], axis=1)).to_csv('foo.csv')
+    sensitivity_PER_df.to_csv(csv_path, header=True, index=False)   # write file to drive
+    print(f'File {csv_path} saved.')
 
