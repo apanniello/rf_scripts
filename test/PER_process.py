@@ -21,6 +21,7 @@ __author__ = 'Attilio Panniello'
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 calibration_meas = './Savituck_TRM-2Mbps-01.csv'
 per_meas = './Savituck_RCV-2Mbps-01.csv'
@@ -107,7 +108,7 @@ for i in range(minChanel, maxChanel+1, 1):
     # RxPwr = calibration_df[calibration_mask]['H1 (dBm)'] - attenuation : chained-indexing
     RxPwr = calibration_df.loc[calibration_mask,'H1 (dBm)'].item() - attenuation # : to avoid chained-indexing
     RxPwr_column.append(RxPwr)
-    sensitivity_PER_df=sensitivity_PER_df.append(channel_df_min, ignore_index=True)
+    sensitivity_PER_df = sensitivity_PER_df.append(channel_df_min, ignore_index=True)
 
 # sensitivity_PER_df = sensitivity_PER_df.reset_index()
 sensitivity_PER_df['Sensitivity [dBm]'] = RxPwr_column
@@ -129,7 +130,6 @@ print(f'--------------------------------------------')
 print(f'last attenuation : {attenuation}')
 print(f'last RxPwr : {RxPwr}')
 
-
 ##########################################################################
 #
 # Save sensitivity attenuation values into ooutput file
@@ -140,3 +140,12 @@ if sensitivity_PER_df is not None:
     print(f'File {csv_path} saved.')
 #
 ##########################################################################
+
+
+##########################################################################
+#
+# Graphs plotting section
+sensitivity_PER_df.head
+sensitivity_PER_df.plot()
+
+plt.show()
