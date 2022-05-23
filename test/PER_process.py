@@ -22,10 +22,71 @@ __author__ = 'Attilio Panniello'
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import csv
 
 calibration_meas = './Savituck_TRM-2Mbps-01.csv'
 per_meas = './Savituck_RCV-2Mbps-01.csv'
+# per_meas = './Savituck_RCV-2Mbps-01 - Copy.csv'
 attenuator_calibration_file = './J7211A_Correction.csv'
+sensitivity_meas = './Savituck_Sensitivity-2Mbps-01.csv'
+
+
+# # Parse file for measurment settings
+# with open(per_meas, 'r') as csv_file:
+#     csv_reader = csv.reader(csv_file)
+#     for line in csv_reader:
+#         if 'Attenuation_Enum' in line:
+#             print(f'It''s here : {line}')
+#         else:
+#             print(f'Attenuation_Enum not found...')
+
+#############
+# Parsing functions
+def search_string_in_file(file_name, string_to_search):
+    """Search for the given string in file and return lines containing that string,
+    along with line numbers"""
+    line_number = 0
+    list_of_results = []
+    # Open the file in read only mode
+    with open(file_name, 'r') as read_obj:
+        # Read all lines in the file one by one
+        for line in read_obj:
+            # For each line, check if line contains the string
+            line_number += 1
+            if string_to_search in line:
+                # If yes, then add the line number & line as a tuple in the list
+                list_of_results.append((line_number, line.rstrip()))
+    # Return list of tuples containing line numbers and lines where string is found
+    return list_of_results
+
+def search_meas_params_in_csv(file_name, string_to_search):
+    """Search for channels and attenuation values used for PER eRTS meas in .csv output file and return values"""
+    line_number = 0
+    list_of_results = []
+    # Open the file in read only mode
+    with open(file_name, 'r') as read_obj:
+        # Read all lines in the file one by one
+        for line in read_obj:
+            # For each line, check if line contains the string
+            line_number += 1
+            if str(string_to_search + '_Enum') in line:
+                # If yes, then add the line number & line as a tuple in the list
+                results_str = line.rstrip()
+                list = results_str.split("=")
+                print(f'list = {list}')
+
+    # Return list of tuples containing line numbers and lines where string is found
+    return results_str
+
+# Attenuation_Min=
+# Attenuation_Max=
+# Attenuation_Step=
+# Attenuation_Enum=91
+
+
+a= search_meas_params_in_csv(per_meas,'Attenuation')
+print(f'found in file : {a} of type {type(a)}')
+print(f'--------------------------------------------')
 
 minChanel = 3
 maxChanel = 79
@@ -45,7 +106,9 @@ targetPERrd = 0.14
 def p2f(x):
     return float(x.strip('%'))/100
 
-attenuationValues =[0,20,40,60,80,85,87,89,90,91,92,93,95,98,100]
+# attenuationValues =[0,20,40,60,80,85,87,89,90,91,92,93,95,98,100]
+attenuationValues =[91,92,93,95,96,97,98,99]
+
 attenuationSteps = len(attenuationValues) # number of different attenuations used
 # print(f'Number of attenuation steps: {attenuationSteps}')
 PER_lines = calibration_chanels*attenuationSteps
@@ -87,6 +150,7 @@ print(f'--------------------------------------------')
 # df[(df['Points']==0) & (df['Day']==df[df['Points']==0]['Day'].min())]
 
 RxPwr_column = []
+DS_sensitivity = []
 sensitivity_PER_df = pd.DataFrame()
 # channel_df_fields = ['PerRx(%)','Channel','Attenuation','Rx InputPower [dBm]']
 # channel_df_min = pd.DataFrame(columns=channel_df_fields)
@@ -113,6 +177,10 @@ for i in range(minChanel, maxChanel+1, 1):
 # sensitivity_PER_df = sensitivity_PER_df.reset_index()
 sensitivity_PER_df['Sensitivity [dBm]'] = RxPwr_column
 
+DS_sensitivity = -86
+DS_sensitivity_column = [DS_sensitivity]*calibration_chanels
+sensitivity_PER_df['Datasheet Sensitivity [dBm]'] = DS_sensitivity_column
+
 print(f'channel_df :\n {channel_df}')
 print(f'type channel_df : {type(channel_df)}')
 print(f'--------------------------------------------')
@@ -133,7 +201,7 @@ print(f'last RxPwr : {RxPwr}')
 ##########################################################################
 #
 # Save sensitivity attenuation values into ooutput file
-csv_path = './output.csv'
+csv_path = sensitivity_meas
 if sensitivity_PER_df is not None:
     # pd.concat([df3, df4], axis=1)).to_csv('foo.csv')
     sensitivity_PER_df.to_csv(csv_path, header=True, index=False)   # write file to drive
@@ -146,6 +214,10 @@ if sensitivity_PER_df is not None:
 #
 # Graphs plotting section
 sensitivity_PER_df.head
-sensitivity_PER_df.plot()
+xAxisLim = [minChanel, maxChanel]
+yAxisLim = [-100, -70]
+sensitivity_PER_df.plot(x='Channel',y=['Sensitivity [dBm]','Datasheet Sensitivity [dBm]'], xlim = xAxisLim, ylim = yAxisLim, xlabel='Channel', ylabel='Sensitivity [dBm]', title='Sensitivity Measurement Results')
+# plt.axis([minChanel, maxChanel, -100, -70])
+# fig,ax = plt.subplots()
 
 plt.show()
