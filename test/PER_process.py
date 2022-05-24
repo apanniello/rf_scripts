@@ -25,8 +25,8 @@ import matplotlib.pyplot as plt
 import csv
 
 calibration_meas = './Savituck_TRM-2Mbps-01.csv'
-per_meas = './Savituck_RCV-2Mbps-01.csv'
-# per_meas = './Savituck_RCV-2Mbps-01 - Copy.csv'
+# per_meas = './Savituck_RCV-2Mbps-01.csv'
+per_meas = './Savituck_RCV-2Mbps-01 - Copy.csv'
 attenuator_calibration_file = './J7211A_Correction.csv'
 sensitivity_meas = './Savituck_Sensitivity-2Mbps-01.csv'
 
@@ -62,7 +62,9 @@ def search_string_in_file(file_name, string_to_search):
 def search_meas_params_in_csv(file_name, string_to_search):
     """Search for channels and attenuation values used for PER eRTS meas in .csv output file and return values"""
     line_number = 0
-    list_of_results = []
+    listEnum = []
+    listMinMax = []
+    listEnumFlag = False
     # Open the file in read only mode
     with open(file_name, 'r') as read_obj:
         # Read all lines in the file one by one
@@ -72,33 +74,66 @@ def search_meas_params_in_csv(file_name, string_to_search):
             if str(string_to_search + '_Enum') in line:
                 # If yes, then add the line number & line as a tuple in the list
                 results_str = line.rstrip()
-                list = results_str.split("=")
-                print(f'list = {list}')
-
+                tempList = results_str.split("=")
+                listName = tempList[0]
+                # listName = line.rstrip().split("=")[0]
+                listEnum.append(listName)
+                listValuesStr = tempList[1].split(",")
+                print(f'listValuesStr = {listValuesStr}')
+                if listValuesStr != ['']:
+                    listValues = [int(x) for x in listValuesStr]
+                    # [int(x) for x in a]
+                    listEnum.append(listValues)
+                    listEnumFlag = True
+                tempList = []
+            elif str(string_to_search + '_Min') in line:
+                listMin = line.rstrip().split("=")[1]
+            elif str(string_to_search + '_Max') in line:
+                listMax = line.rstrip().split("=")[1]
+            elif str(string_to_search + '_Step') in line:
+                listStep = line.rstrip().split("=")[1]
+    
+    print(f'listEnumFlag = {listEnumFlag}')
+    if listEnumFlag == True :
+        list = listEnum
+    else:
+        print(f'listMinMax = {listMinMax}')
+        print(f'listMin type : {type(listMin)}')
+        listMinMax.append(str(string_to_search + '_Enum'))
+        listMinMax.append([int(listMin),int(listMax),int(listStep)])
+        list = listMinMax
+    print(f'list = {list}')
     # Return list of tuples containing line numbers and lines where string is found
-    return results_str
+    return list
 
-# Attenuation_Min=
-# Attenuation_Max=
-# Attenuation_Step=
-# Attenuation_Enum=91
+# a = search_meas_params_in_csv(per_meas,'Attenuation')
+# print(f'Attenuations found : {a} of type {type(a)}')
+# print(f'--------------------------------------------')
+
+# c = search_meas_params_in_csv(per_meas,'Channel')
+# print(f'Channels found : {c} of type {type(c)}')
+# print(f'--------------------------------------------')
 
 
-a= search_meas_params_in_csv(per_meas,'Attenuation')
-print(f'found in file : {a} of type {type(a)}')
+attenuationValues = search_meas_params_in_csv(per_meas,'Attenuation')[1]
+print(f'attenuationValues : {attenuationValues}')
 print(f'--------------------------------------------')
-
-minChanel = 3
-maxChanel = 79
+channelValues = search_meas_params_in_csv(per_meas,'Channel')
+print(f'channelValues : {channelValues}')
+print(f'--------------------------------------------')
+minChanel = channelValues[1][0]
+maxChanel = channelValues[1][1]
+stepChanel = channelValues[1][2]
 
 calibration_chanels = maxChanel- minChanel +1
 calibration_fields = ['Channel', 'H1 (dBm)']
 calibration_df = pd.read_csv(calibration_meas, skiprows=1,nrows=calibration_chanels, usecols=calibration_fields, sep=',', na_values=" , ")
+
 attenuator_cal_fields = ['Attenuation Setting', '2450']
 attenuator_cal_df = pd.read_csv(attenuator_calibration_file, skiprows=1, usecols=attenuator_cal_fields, sep=',', na_values=" , ")
 
 trmCalibrationPwr = 8
-targetPERrd = 0.14
+targetPERrd = 0.149
 # targetPERrd = '74.56%'
 
 # Custom function taken from https://stackoverflow.com/questions/12432663/what-is-a-clean-way-to-convert-a-string-percent-to-a-float
@@ -107,7 +142,7 @@ def p2f(x):
     return float(x.strip('%'))/100
 
 # attenuationValues =[0,20,40,60,80,85,87,89,90,91,92,93,95,98,100]
-attenuationValues =[91,92,93,95,96,97,98,99]
+
 
 attenuationSteps = len(attenuationValues) # number of different attenuations used
 # print(f'Number of attenuation steps: {attenuationSteps}')
