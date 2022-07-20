@@ -22,6 +22,7 @@ __author__ = 'Attilio Panniello'
 
 import numpy as np
 import pandas as pd
+import matplotlib
 import matplotlib.pyplot as plt
 import csv
 from pathlib import Path
@@ -30,7 +31,7 @@ from pathlib import Path
 
 # # # FLAG used for debug console printings
 #
-debug = False # Set to FALSE in normal mode
+debug = True # Set to FALSE in normal mode
 
 # # # Input file settings section
 #
@@ -185,10 +186,11 @@ attenuator_cal_df = pd.read_csv(attenuator_calibration_file_path, skiprows=1, us
 
 targetPERrd = 0.149
 
+# number of different attenuations used
 if len(attenuationValues)==3 and attenuationValues[2]==1 :
     attenuationSteps= attenuationValues[1]-attenuationValues[0]+1
 else:
-    attenuationSteps = len(attenuationValues) # number of different attenuations used
+    attenuationSteps = len(attenuationValues)
 print(f'Number of attenuation steps: {attenuationSteps}')
 
 
@@ -206,7 +208,9 @@ if debug:
     print(f'--------------------------------------------')
     print(f'PER_df start : {PER_df.head()}')
     print(f'--------------------------------------------')
-    print(f'sorted_PER_df start : {sorted_PER_df.head()}')
+    print(f'sorted_PER_df head : {sorted_PER_df.head()}')
+    print(f'--------------------------------------------')
+    print(f'sorted_PER_df tail : {sorted_PER_df.tail()}')
     print(f'--------------------------------------------')
 
 # EXAMPLES:
@@ -240,7 +244,9 @@ sensitivity_PER_df = pd.DataFrame()
 for i in range(minChanel, maxChanel+1, 1):
     channel_df = sorted_PER_df[sorted_PER_df['Channel']==i]
     channel_per_max = sorted_PER_df[sorted_PER_df['Channel']==i]['PerRx(%)'].max()
-    channel_df_per_max = channel_df[channel_df['PerRx(%)'] == channel_per_max]
+    per_max_attenuation = sorted_PER_df[sorted_PER_df['Channel']==i]['Attenuation'].max()
+    # channel_df_per_max = channel_df[channel_df['PerRx(%)'] == channel_per_max]
+    channel_df_per_max = channel_df[channel_df['Attenuation'] == per_max_attenuation]
     # channel_df_per_max['Rx InputPower [dBm]'] = ""
     # channel_df_per_max.loc[:,'Rx InputPower [dBm]'] = i
     # channel_df_per_max['Rx InputPower [dBm]'] = i
@@ -311,10 +317,14 @@ ax = sensitivity_PER_df.plot(x='Channel', y=['Sensitivity [dBm]','Datasheet Sens
 fig = ax.get_figure() #https://stackoverflow.com/questions/18992086/save-a-pandas-series-histogram-plot-to-file
 ax.set_title('Sensitivity Measurement Results')
 ax.set_xlim((minChanel, maxChanel))
-ax.set_ylim((-95, -80))
+ax.set_ylim((-90, -80))
+xminor_locator=matplotlib.ticker.MultipleLocator(base=1.0)
+xmajor_locator=matplotlib.ticker.MultipleLocator(5)
+ax.xaxis.set_minor_locator(xminor_locator)
+ax.xaxis.set_major_locator(xmajor_locator)
 ax.set_xlabel('Channel')
 ax.set_ylabel('Sensitivity [dBm]')
-ax.grid(True)
+ax.grid(visible=True, which='major') # https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.grid.html
 
 
 # sensitivity_PER_df.plot(x='Channel', y=['Sensitivity [dBm]','Datasheet Sensitivity @ ADDR0 [dBm]','Datasheet Sensitivity @ ADDRxx [dBm]'], grid = True, ax = ax)
