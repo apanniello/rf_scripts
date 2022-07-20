@@ -39,8 +39,8 @@ calibration_meas_path_exists = calibration_meas.is_file()
 print(f'--------------------------------------------')
 print(f'TRM eRTS file found : {calibration_meas_path_exists}')
 
-per_meas_path = Path('./Savituck_RCV-2Mbps-01 - Copy.csv')
-# per_meas_path = Path('./Savituck_RCV-2Mbps-01.csv')
+# per_meas_path = Path('./Savituck_RCV-2Mbps-01 - Copy.csv')
+per_meas_path = Path('./Savituck_RCV-2Mbps-01.csv')
 per_meas_path_exists = per_meas_path.is_file()
 print(f'RCV eRTS file found : {per_meas_path_exists}')
 
@@ -184,8 +184,14 @@ attenuator_cal_fields = ['Attenuation Setting', '2450']
 attenuator_cal_df = pd.read_csv(attenuator_calibration_file_path, skiprows=1, usecols=attenuator_cal_fields, sep=',', na_values=" , ")
 
 targetPERrd = 0.149
-attenuationSteps = len(attenuationValues) # number of different attenuations used
-# print(f'Number of attenuation steps: {attenuationSteps}')
+
+if len(attenuationValues)==3 and attenuationValues[2]==1 :
+    attenuationSteps= attenuationValues[1]-attenuationValues[0]+1
+else:
+    attenuationSteps = len(attenuationValues) # number of different attenuations used
+print(f'Number of attenuation steps: {attenuationSteps}')
+
+
 PER_lines = calibration_chanels*attenuationSteps
 PER_fields = ['PerRx(%)', 'Channel','Attenuation']
 PER_df = pd.read_csv(per_meas_path, skiprows=1,nrows=PER_lines, usecols=PER_fields, converters={'PerRx(%)':p2f}, sep=',', na_values=" , ")
@@ -302,10 +308,10 @@ if sensitivity_PER_df is not None:
 # fig,ax = plt.subplots()
 
 ax = sensitivity_PER_df.plot(x='Channel', y=['Sensitivity [dBm]','Datasheet Sensitivity @ ADDR0 [dBm]','Datasheet Sensitivity @ ADDRxx [dBm]'])
-fig = ax.get_figure()
+fig = ax.get_figure() #https://stackoverflow.com/questions/18992086/save-a-pandas-series-histogram-plot-to-file
 ax.set_title('Sensitivity Measurement Results')
 ax.set_xlim((minChanel, maxChanel))
-ax.set_ylim((-93, -83))
+ax.set_ylim((-95, -80))
 ax.set_xlabel('Channel')
 ax.set_ylabel('Sensitivity [dBm]')
 ax.grid(True)

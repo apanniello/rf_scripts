@@ -4,10 +4,10 @@
 # Python Test Box
 # ------------------------------------------------------------------------------
 """
-    :package: WireSharkLogger
-    :brief: Control class for Latencies logging activities 
+    :package: RF Connectivity Team Tools
+    :brief: Calculate sensitivity from eRTS output files 
     :author: Attilio Panniello
-    :date:   2020/12/03
+    :date:   14/06/2022
 """
 
 # ------------------------------------------------------------------------------
@@ -27,6 +27,7 @@ from datetime import datetime
 # ------------------------------------------------------------------------------
 # meas configuration settings
 # -----------------------------------------------------------------------------
+
 
 perFile = 'Savituck_RCV-2Mbps-01'
 calFile = 'Savituck_TRM_MAX-2Mbps-01'
@@ -57,7 +58,11 @@ def yes_no(question):
            print ("Please respond with 'yes' or 'no'")
 
 # User interaction section
-trmCalibrationPwr = int(input("Please enter the power used for the calibration of the TRM in dBm [default = 8]:") or 8 )
+
+#trmCalibrationPwr = int(input("Please enter the power used for the calibration of the TRM in dBm [default = 8]:") or 8 ) #not needed
+
+## link to excel file of packet description : https://docs.google.com/spreadsheets/d/1JvdCQO6gYh1yywk7u2wp9gRC_pXtW83WU3kgFseekxo/edit?usp=sharing
+#
 dataPayload = int(input("Please enter payload length in bytes [default = 10]:") or 10 )
 isGaming = yes_no("Gaming [y or Return] or Unifying [n] DUT?")
 
