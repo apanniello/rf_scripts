@@ -52,7 +52,6 @@ if not calibration_meas_path_exists or not per_meas_path_exists :
 # # # Output file settings section
 #
 sensitivity_meas = Path('./outputFiles/Sensitivity-2Mbps-01.csv')
-# sensitivity_deltaPERmin_meas = Path('./outputFiles/Sensitivity2-2Mbps-01.csv')
 
 # ------------------------------------------------------------------------------
 # meas configuration settings
@@ -323,30 +322,19 @@ RxPwr_column = []
 # RxPwr_column2 = []
 DS_sensitivity = []
 sensitivity_PER_df = pd.DataFrame()
-# sensitivity2_PER_df = pd.DataFrame()
-# channel_df_fields = ['PerRx(%)','Channel','Attenuation','Rx InputPower [dBm]']
-# channel_per_df = pd.DataFrame(columns=channel_df_fields)
+
 
 for i in range(minChanel, maxChanel+1, 1):
     if minDeltaPER:
         delta_per_min_val = PER_df[PER_df['Channel']==i]['DeltaPER'].min()
         channel_per_df = PER_df[(PER_df['Channel']==i) & (PER_df['DeltaPER']==delta_per_min_val)]
-        # attenuation_mask2 = channel_per_df['Channel']==i
         per_max_attenuation = channel_per_df['Attenuation']
 
     else:
         channel_df = sorted_PER_df[sorted_PER_df['Channel']==i]
-        # channel_per_max = sorted_PER_df[sorted_PER_df['Channel']==i]['PerRx(%)'].max()
         per_max_attenuation = sorted_PER_df[sorted_PER_df['Channel']==i]['Attenuation'].max()
-        # channel_per_df = channel_df[channel_df['PerRx(%)'] == channel_per_max]
         channel_per_df = channel_df[channel_df['Attenuation'] == per_max_attenuation]
-        # channel_per_df['Rx InputPower [dBm]'] = ""
-        # channel_per_df.loc[:,'Rx InputPower [dBm]'] = i
-        # channel_per_df['Rx InputPower [dBm]'] = i
-        # attenuation_mask = channel_per_df['Channel']==i
-        # Attenuation = channel_per_df[channel_per_df['Channel']==i]['Attenuation'].item()
-        # DF.loc[DF.someCondition=condition, 'A'].item() : to avoid chained-indexing
-        # Attenuation = channel_per_df.loc[channel_per_df['Channel']==i,'Attenuation'].item()
+  
 
     attenuation_mask = channel_per_df['Channel']==i
     
@@ -355,25 +343,14 @@ for i in range(minChanel, maxChanel+1, 1):
         attenuator_mask = attenuator_cal_df['Attenuation Setting'] == attenuation_uncal
         attenuator_mask0 = attenuator_cal_df['Attenuation Setting'] == 0
         attenuation = attenuator_cal_df.loc[attenuator_mask,'2450'].item() - attenuator_cal_df.loc[attenuator_mask0,'2450'].item()
-        # attenuation_uncal2 = delta_per_min_df.loc[attenuation_mask2,'Attenuation'].item()
-        # attenuator_mask2 = attenuator_cal_df['Attenuation Setting'] == attenuation_uncal2
-        # attenuation2 = attenuator_cal_df.loc[attenuator_mask2,'2450'].item() - attenuator_cal_df.loc[attenuator_mask0,'2450'].item()
     else:
         attenuation = channel_per_df.loc[attenuation_mask,'Attenuation'].item()
-        # attenuation2 = delta_per_min_df.loc[attenuation_mask2,'Attenuation'].item()
-    # DF.loc[DF.someCondition=condition, 'A'].item()
-    # RxPwr = calibration_df_0dBm[calibration_mask]['H1 (dBm)'] - attenuation : chained-indexing
     calibration_mask = calibration_df_0dBm['Channel'] == i
     RxPwr = calibration_df_0dBm.loc[calibration_mask,'H1 (dBm)'].item() - attenuation # : to avoid chained-indexing
-    # RxPwr2 = calibration_df_0dBm.loc[calibration_mask,'H1 (dBm)'].item() - attenuation2 # : to avoid chained-indexing
     RxPwr_column.append(RxPwr)
-    # RxPwr_column2.append(RxPwr2)
     sensitivity_PER_df = sensitivity_PER_df.append(channel_per_df, ignore_index=True)
-    # sensitivity2_PER_df = sensitivity2_PER_df.append(delta_per_min_df, ignore_index=True)
 
-# sensitivity_PER_df = sensitivity_PER_df.reset_index()
 sensitivity_PER_df['Sensitivity [dBm]'] = RxPwr_column
-# sensitivity2_PER_df['Sensitivity [dBm]'] = RxPwr_column2
 
 DS_sensitivity_ADDR0 = -89
 DS_sensitivity_ADDRxx = DS_sensitivity_ADDR0 + 3
@@ -381,13 +358,8 @@ DS_sensitivity_ADDR0column = [DS_sensitivity_ADDR0]*calibration_chanels
 DS_sensitivity_ADDRxxcolumn = [DS_sensitivity_ADDRxx]*calibration_chanels
 sensitivity_PER_df['Datasheet Sensitivity @ ADDR0 [dBm]'] = DS_sensitivity_ADDR0column
 sensitivity_PER_df['Datasheet Sensitivity @ ADDRxx [dBm]'] = DS_sensitivity_ADDRxxcolumn
-# sensitivity2_PER_df['Datasheet Sensitivity @ ADDR0 [dBm]'] = DS_sensitivity_ADDR0column
-# sensitivity2_PER_df['Datasheet Sensitivity @ ADDRxx [dBm]'] = DS_sensitivity_ADDRxxcolumn
 
 if debug:
-    # print(f'channel_df :\n {channel_df}')
-    # print(f'type channel_df : {type(channel_df)}')
-    # print(f'--------------------------------------------')
     print(f'max attenuation @ perTarget  : {per_max_attenuation}')
     print(f'--------------------------------------------')
     print(f'channel_df_@min : {channel_per_df}')
@@ -408,7 +380,6 @@ if debug:
 if sensitivity_PER_df is not None:
     # pd.concat([df3, df4], axis=1)).to_csv('foo.csv')
     sensitivity_PER_df.to_csv(sensitivity_meas, header=True, index=False)   # write file to drive
-    # sensitivity2_PER_df.to_csv(sensitivity_deltaPERmin_meas, header=True, index=False)   # write file to drive
     print(f'Output file {sensitivity_meas} saved.')
     print(f'--------------------------------------------')
 #
@@ -418,18 +389,8 @@ if sensitivity_PER_df is not None:
 ##########################################################################
 #
 # Graphs plotting section
-# if minDeltaPER:
-#     plotSensi(sensitivity2_PER_df,sensitivity_deltaPERmin_meas)
-# else:
-#     plotSensi(sensitivity_PER_df,sensitivity_meas)
-
 plotSensi(sensitivity_PER_df,sensitivity_meas,minDeltaPER)
 # sensitivity_PER_df.plot(x='Channel', y=['Sensitivity [dBm]','Datasheet Sensitivity @ ADDR0 [dBm]','Datasheet Sensitivity @ ADDRxx [dBm]'], grid = True, ax = ax)
-
-
-
-
-
 
 #########################################################
 endTime=datetime.now()
