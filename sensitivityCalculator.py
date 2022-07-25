@@ -209,7 +209,8 @@ def plotSensi(df,path,minDeltaPER):
     else:
         ax.set_title('Sensitivity Measurement Results (Strict PER method)')
     ax.set_xlim((minChanel, maxChanel))
-    ax.set_ylim((-93, -83))
+    # ax.set_ylim((-93, -83))
+    ax.set_ylim((-90, -80))
     xminor_locator=matplotlib.ticker.MultipleLocator(base=1.0)
     xmajor_locator=matplotlib.ticker.MultipleLocator(5)
     ax.xaxis.set_minor_locator(xminor_locator)
