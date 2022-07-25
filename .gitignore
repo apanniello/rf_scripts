@@ -3,6 +3,9 @@ test/Savituck_Sensitivity-2Mbps-01.csv
 test/Sensitivity.png
 build/
 __pycache__/sensitivityCalculator.cpython-38.pyc
-inputFiles/
 outputFiles/
 dist/
+test/Savituck_RCV-2Mbps-01-rev003_m3.csv
+test/Savituck_RCV-2Mbps-01.csv
+inputFiles/RCV-2Mbps-01-Rev3_2.csv
+inputFiles/RCV-2Mbps-01-Rev3_3.csv

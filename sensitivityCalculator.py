@@ -52,6 +52,7 @@ if not calibration_meas_path_exists or not per_meas_path_exists :
 # # # Output file settings section
 #
 sensitivity_meas = Path('./outputFiles/Sensitivity-2Mbps-01.csv')
+# sensitivity_deltaPERmin_meas = Path('./outputFiles/Sensitivity2-2Mbps-01.csv')
 
 # ------------------------------------------------------------------------------
 # meas configuration settings
@@ -200,10 +201,42 @@ def search_meas_params_in_csv(file_name, string_to_search):
 def p2f(x):
     return float(x.strip('%'))/100
 
+# Senitivity graphs plotting function
+def plotSensi(df,path,minDeltaPER):
+    ax = df.plot(x='Channel', y=['Sensitivity [dBm]','Datasheet Sensitivity @ ADDR0 [dBm]','Datasheet Sensitivity @ ADDRxx [dBm]'], marker='.') #https://e2eml.school/matplotlib_points.html
+    fig = ax.get_figure() #https://stackoverflow.com/questions/18992086/save-a-pandas-series-histogram-plot-to-file
+    if minDeltaPER:
+        ax.set_title('Sensitivity Measurement Results (Closest PER method)')
+    else:
+        ax.set_title('Sensitivity Measurement Results (Strict PER method)')
+    ax.set_xlim((minChanel, maxChanel))
+    ax.set_ylim((-93, -83))
+    xminor_locator=matplotlib.ticker.MultipleLocator(base=1.0)
+    xmajor_locator=matplotlib.ticker.MultipleLocator(5)
+    ax.xaxis.set_minor_locator(xminor_locator)
+    ax.xaxis.set_major_locator(xmajor_locator)
+    ax.set_xlabel('Channel')
+    ax.set_ylabel('Sensitivity [dBm]')
+    ax.grid(visible=True, which='major') # https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.grid.html
+    plotPath=path.with_suffix('.png')
+    fig.savefig(plotPath)
+    plt.show()
+    # xAxisLim = [minChanel, maxChanel]
+    # yAxisLim = [-93, -83]
+    # sensitivity_PER_df.plot(x='Channel',y=['Sensitivity [dBm]','Datasheet Sensitivity @ ADDR0 [dBm]','Datasheet Sensitivity @ ADDRxx [dBm]'], xlim = xAxisLim, ylim = yAxisLim, xlabel='Channel', ylabel='Sensitivity [dBm]', title='Sensitivity Measurement Results')
+    # marker='o'
+    # plt.axis([minChanel, maxChanel, -100, -70])
+
 #########################################################
 # Start of User interaction section
+
+# Target PER calculation based on packet length
 targetPERrd = defineTargetPER()
-debug = False # Set to FALSE in normal mode
+
+# Choose PER calculation method (default = minimum PERdelta)
+minDeltaPER = yes_no("Closest PER method ((abs[TargetPER - MeasPER])min) [y or Return] or strict PER method (MeasPER < TargetPER) [n]?")
+# debug = False # Set to FALSE in normal mode
+debug = True # Set to FALSE in normal mode
 #########################################################
 # End of User interaction section
 startTime=datetime.now()
@@ -226,7 +259,7 @@ stepChanel = channelValues[1][2]
 
 calibration_chanels = maxChanel- minChanel +1
 calibration_fields = ['Channel', 'H1 (dBm)']
-calibration_df = pd.read_csv(calibration_meas, skiprows=1,nrows=calibration_chanels, usecols=calibration_fields, sep=',', na_values=" , ")
+calibration_df_0dBm = pd.read_csv(calibration_meas, skiprows=1,nrows=calibration_chanels, usecols=calibration_fields, sep=',', na_values=" , ")
 
 attenuator_cal_fields = ['Attenuation Setting', '2450']
 attenuator_cal_df = pd.read_csv(attenuator_calibration_file_path, skiprows=1, usecols=attenuator_cal_fields, sep=',', na_values=" , ")
@@ -246,14 +279,18 @@ PER_fields = ['PerRx(%)', 'Channel','Attenuation']
 PER_df = pd.read_csv(per_meas_path, skiprows=1,nrows=PER_lines, usecols=PER_fields, converters={'PerRx(%)':p2f}, sep=',', na_values=" , ")
 
 sorted_PER_df = PER_df[PER_df['PerRx(%)'] <= targetPERrd]
+# df_deltaPER = PER_df
+PER_df['DeltaPER'] = abs(targetPERrd - PER_df['PerRx(%)'])
 ##########################################################################
 #
 # Debug printings
 #
 if debug:
-    print(f'calibration_df start : {calibration_df.head()}')
+    print(f'calibration_df_0dBm start : {calibration_df_0dBm.head()}')
     print(f'--------------------------------------------')
-    print(f'PER_df start : {PER_df.head()}')
+    print(f'PER_df head : {PER_df.head()}')
+    print(f'--------------------------------------------')
+    print(f'PER_df tail : {PER_df.tail()}')
     print(f'--------------------------------------------')
     print(f'sorted_PER_df head : {sorted_PER_df.head()}')
     print(f'--------------------------------------------')
@@ -283,39 +320,60 @@ if debug:
 # df[(df['Points']==0) & (df['Day']==df[df['Points']==0]['Day'].min())]
 
 RxPwr_column = []
+# RxPwr_column2 = []
 DS_sensitivity = []
 sensitivity_PER_df = pd.DataFrame()
+# sensitivity2_PER_df = pd.DataFrame()
 # channel_df_fields = ['PerRx(%)','Channel','Attenuation','Rx InputPower [dBm]']
-# channel_df_per_max = pd.DataFrame(columns=channel_df_fields)
+# channel_per_df = pd.DataFrame(columns=channel_df_fields)
 
 for i in range(minChanel, maxChanel+1, 1):
-    channel_df = sorted_PER_df[sorted_PER_df['Channel']==i]
-    channel_per_max = sorted_PER_df[sorted_PER_df['Channel']==i]['PerRx(%)'].max()
-    per_max_attenuation = sorted_PER_df[sorted_PER_df['Channel']==i]['Attenuation'].max()
-    # channel_df_per_max = channel_df[channel_df['PerRx(%)'] == channel_per_max]
-    channel_df_per_max = channel_df[channel_df['Attenuation'] == per_max_attenuation]
-    # channel_df_per_max['Rx InputPower [dBm]'] = ""
-    # channel_df_per_max.loc[:,'Rx InputPower [dBm]'] = i
-    # channel_df_per_max['Rx InputPower [dBm]'] = i
-    attenuation_mask = channel_df_per_max['Channel']==i
-    calibration_mask = calibration_df['Channel'] == i
-    # Attenuation = channel_df_per_max[channel_df_per_max['Channel']==i]['Attenuation'].item()
-    # DF.loc[DF.someCondition=condition, 'A'].item() : to avoid chained-indexing
-    # Attenuation = channel_df_per_max.loc[channel_df_per_max['Channel']==i,'Attenuation'].item()
-    if attenuator_calibration_file_path_exists: # take into account attenuator file if  it exists
-        attenuation_uncal = channel_df_per_max.loc[attenuation_mask,'Attenuation'].item()
-        attenuator_mask = attenuator_cal_df['Attenuation Setting'] == attenuation_uncal
-        attenuation = attenuator_cal_df.loc[attenuator_mask,'2450'].item()
+    if minDeltaPER:
+        delta_per_min_val = PER_df[PER_df['Channel']==i]['DeltaPER'].min()
+        channel_per_df = PER_df[(PER_df['Channel']==i) & (PER_df['DeltaPER']==delta_per_min_val)]
+        # attenuation_mask2 = channel_per_df['Channel']==i
+        per_max_attenuation = channel_per_df['Attenuation']
+
     else:
-        attenuation = channel_df_per_max.loc[attenuation_mask,'Attenuation'].item()
+        channel_df = sorted_PER_df[sorted_PER_df['Channel']==i]
+        # channel_per_max = sorted_PER_df[sorted_PER_df['Channel']==i]['PerRx(%)'].max()
+        per_max_attenuation = sorted_PER_df[sorted_PER_df['Channel']==i]['Attenuation'].max()
+        # channel_per_df = channel_df[channel_df['PerRx(%)'] == channel_per_max]
+        channel_per_df = channel_df[channel_df['Attenuation'] == per_max_attenuation]
+        # channel_per_df['Rx InputPower [dBm]'] = ""
+        # channel_per_df.loc[:,'Rx InputPower [dBm]'] = i
+        # channel_per_df['Rx InputPower [dBm]'] = i
+        # attenuation_mask = channel_per_df['Channel']==i
+        # Attenuation = channel_per_df[channel_per_df['Channel']==i]['Attenuation'].item()
+        # DF.loc[DF.someCondition=condition, 'A'].item() : to avoid chained-indexing
+        # Attenuation = channel_per_df.loc[channel_per_df['Channel']==i,'Attenuation'].item()
+
+    attenuation_mask = channel_per_df['Channel']==i
+    
+    if attenuator_calibration_file_path_exists: # take into account attenuator file if  it exists
+        attenuation_uncal = channel_per_df.loc[attenuation_mask,'Attenuation'].item()
+        attenuator_mask = attenuator_cal_df['Attenuation Setting'] == attenuation_uncal
+        attenuator_mask0 = attenuator_cal_df['Attenuation Setting'] == 0
+        attenuation = attenuator_cal_df.loc[attenuator_mask,'2450'].item() - attenuator_cal_df.loc[attenuator_mask0,'2450'].item()
+        # attenuation_uncal2 = delta_per_min_df.loc[attenuation_mask2,'Attenuation'].item()
+        # attenuator_mask2 = attenuator_cal_df['Attenuation Setting'] == attenuation_uncal2
+        # attenuation2 = attenuator_cal_df.loc[attenuator_mask2,'2450'].item() - attenuator_cal_df.loc[attenuator_mask0,'2450'].item()
+    else:
+        attenuation = channel_per_df.loc[attenuation_mask,'Attenuation'].item()
+        # attenuation2 = delta_per_min_df.loc[attenuation_mask2,'Attenuation'].item()
     # DF.loc[DF.someCondition=condition, 'A'].item()
-    # RxPwr = calibration_df[calibration_mask]['H1 (dBm)'] - attenuation : chained-indexing
-    RxPwr = calibration_df.loc[calibration_mask,'H1 (dBm)'].item() - attenuation # : to avoid chained-indexing
+    # RxPwr = calibration_df_0dBm[calibration_mask]['H1 (dBm)'] - attenuation : chained-indexing
+    calibration_mask = calibration_df_0dBm['Channel'] == i
+    RxPwr = calibration_df_0dBm.loc[calibration_mask,'H1 (dBm)'].item() - attenuation # : to avoid chained-indexing
+    # RxPwr2 = calibration_df_0dBm.loc[calibration_mask,'H1 (dBm)'].item() - attenuation2 # : to avoid chained-indexing
     RxPwr_column.append(RxPwr)
-    sensitivity_PER_df = sensitivity_PER_df.append(channel_df_per_max, ignore_index=True)
+    # RxPwr_column2.append(RxPwr2)
+    sensitivity_PER_df = sensitivity_PER_df.append(channel_per_df, ignore_index=True)
+    # sensitivity2_PER_df = sensitivity2_PER_df.append(delta_per_min_df, ignore_index=True)
 
 # sensitivity_PER_df = sensitivity_PER_df.reset_index()
 sensitivity_PER_df['Sensitivity [dBm]'] = RxPwr_column
+# sensitivity2_PER_df['Sensitivity [dBm]'] = RxPwr_column2
 
 DS_sensitivity_ADDR0 = -89
 DS_sensitivity_ADDRxx = DS_sensitivity_ADDR0 + 3
@@ -323,14 +381,16 @@ DS_sensitivity_ADDR0column = [DS_sensitivity_ADDR0]*calibration_chanels
 DS_sensitivity_ADDRxxcolumn = [DS_sensitivity_ADDRxx]*calibration_chanels
 sensitivity_PER_df['Datasheet Sensitivity @ ADDR0 [dBm]'] = DS_sensitivity_ADDR0column
 sensitivity_PER_df['Datasheet Sensitivity @ ADDRxx [dBm]'] = DS_sensitivity_ADDRxxcolumn
+# sensitivity2_PER_df['Datasheet Sensitivity @ ADDR0 [dBm]'] = DS_sensitivity_ADDR0column
+# sensitivity2_PER_df['Datasheet Sensitivity @ ADDRxx [dBm]'] = DS_sensitivity_ADDRxxcolumn
 
 if debug:
-    print(f'channel_df :\n {channel_df}')
-    print(f'type channel_df : {type(channel_df)}')
+    # print(f'channel_df :\n {channel_df}')
+    # print(f'type channel_df : {type(channel_df)}')
+    # print(f'--------------------------------------------')
+    print(f'max attenuation @ perTarget  : {per_max_attenuation}')
     print(f'--------------------------------------------')
-    print(f'channel_per_max : {channel_per_max}')
-    print(f'--------------------------------------------')
-    print(f'channel_df_@min : {channel_df_per_max}')
+    print(f'channel_df_@min : {channel_per_df}')
     print(f'--------------------------------------------')
     print(f'--------------------------------------------')
     print(f'sensitivity_PER_df :\n {sensitivity_PER_df}')
@@ -348,6 +408,7 @@ if debug:
 if sensitivity_PER_df is not None:
     # pd.concat([df3, df4], axis=1)).to_csv('foo.csv')
     sensitivity_PER_df.to_csv(sensitivity_meas, header=True, index=False)   # write file to drive
+    # sensitivity2_PER_df.to_csv(sensitivity_deltaPERmin_meas, header=True, index=False)   # write file to drive
     print(f'Output file {sensitivity_meas} saved.')
     print(f'--------------------------------------------')
 #
@@ -357,34 +418,18 @@ if sensitivity_PER_df is not None:
 ##########################################################################
 #
 # Graphs plotting section
+# if minDeltaPER:
+#     plotSensi(sensitivity2_PER_df,sensitivity_deltaPERmin_meas)
+# else:
+#     plotSensi(sensitivity_PER_df,sensitivity_meas)
 
-# fig,ax = plt.subplots()
-
-ax = sensitivity_PER_df.plot(x='Channel', y=['Sensitivity [dBm]','Datasheet Sensitivity @ ADDR0 [dBm]','Datasheet Sensitivity @ ADDRxx [dBm]'])
-fig = ax.get_figure() #https://stackoverflow.com/questions/18992086/save-a-pandas-series-histogram-plot-to-file
-ax.set_title('Sensitivity Measurement Results')
-ax.set_xlim((minChanel, maxChanel))
-ax.set_ylim((-90, -80))
-xminor_locator=matplotlib.ticker.MultipleLocator(base=1.0)
-xmajor_locator=matplotlib.ticker.MultipleLocator(5)
-ax.xaxis.set_minor_locator(xminor_locator)
-ax.xaxis.set_major_locator(xmajor_locator)
-ax.set_xlabel('Channel')
-ax.set_ylabel('Sensitivity [dBm]')
-ax.grid(visible=True, which='major') # https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.grid.html
-
-
+plotSensi(sensitivity_PER_df,sensitivity_meas,minDeltaPER)
 # sensitivity_PER_df.plot(x='Channel', y=['Sensitivity [dBm]','Datasheet Sensitivity @ ADDR0 [dBm]','Datasheet Sensitivity @ ADDRxx [dBm]'], grid = True, ax = ax)
 
 
-# xAxisLim = [minChanel, maxChanel]
-# yAxisLim = [-93, -83]
-# sensitivity_PER_df.plot(x='Channel',y=['Sensitivity [dBm]','Datasheet Sensitivity @ ADDR0 [dBm]','Datasheet Sensitivity @ ADDRxx [dBm]'], xlim = xAxisLim, ylim = yAxisLim, xlabel='Channel', ylabel='Sensitivity [dBm]', title='Sensitivity Measurement Results')
-# marker='o'
-# plt.axis([minChanel, maxChanel, -100, -70])
 
-fig.savefig('./outputFiles/Sensitivity.png')
-plt.show()
+
+
 
 #########################################################
 endTime=datetime.now()
